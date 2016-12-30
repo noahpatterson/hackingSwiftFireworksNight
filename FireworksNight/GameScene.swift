@@ -19,7 +19,7 @@ class GameScene: SKScene {
     //where the launch the fireworks from
     let leftEdge = -22
     let bottomEdge = -22
-    let rightEdget = 1024 + 22
+    let rightEdge = 1024 + 22
     
     var score: Int = 0 {
         didSet {
@@ -41,6 +41,22 @@ class GameScene: SKScene {
     
     override func update(_ currentTime: TimeInterval) {
         // Called before each frame is rendered
+        for (index, firework) in fireworks.enumerated().reversed() {
+            if firework.position.y >= 900 {
+                fireworks.remove(at: index)
+                firework.removeFromParent()
+            }
+        }
+    }
+    
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesBegan(touches, with: event)
+        checkTouches(touches)
+    }
+    
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent?) {
+        super.touchesMoved(touches, with: event)
+        checkTouches(touches)
     }
     
     func createFireworks(xMovement: CGFloat, x: Int, y: Int) {
@@ -87,6 +103,117 @@ class GameScene: SKScene {
     }
     
     func launchFireworks() {
+        let movementAmount = CGFloat(1800)
+            
         
+        switch GKRandomSource.sharedRandom().nextInt(upperBound: 4) {
+        case 0:
+            //fire five straight up
+            createFireworks(xMovement: 0, x: 512, y: bottomEdge)
+            createFireworks(xMovement: 0, x: 512 - 200, y: bottomEdge)
+            createFireworks(xMovement: 0, x: 512 - 100, y: bottomEdge)
+            createFireworks(xMovement: 0, x: 512 + 100, y: bottomEdge)
+            createFireworks(xMovement: 0, x: 512 + 200, y: bottomEdge)
+        case 1:
+            //fire 5 in a fan
+            createFireworks(xMovement: 0, x: 512, y: bottomEdge)
+            createFireworks(xMovement: -200, x: 512 - 200, y: bottomEdge)
+            createFireworks(xMovement: -100, x: 512 - 100, y: bottomEdge)
+            createFireworks(xMovement: 100, x: 512 + 100, y: bottomEdge)
+            createFireworks(xMovement: 200, x: 512 + 200, y: bottomEdge)
+        case 2:
+            // five from left to right
+            createFireworks(xMovement: movementAmount, x: leftEdge, y: bottomEdge + 400)
+            createFireworks(xMovement: movementAmount, x: leftEdge, y: bottomEdge + 300)
+            createFireworks(xMovement: movementAmount, x: leftEdge, y: bottomEdge + 200)
+            createFireworks(xMovement: movementAmount, x: leftEdge, y: bottomEdge + 100)
+            createFireworks(xMovement: movementAmount, x: leftEdge, y: bottomEdge)
+        case 3:
+            // fire five, from the right to the left
+            createFireworks(xMovement: -movementAmount, x: rightEdge, y: bottomEdge + 400)
+            createFireworks(xMovement: -movementAmount, x: rightEdge, y: bottomEdge + 300)
+            createFireworks(xMovement: -movementAmount, x: rightEdge, y: bottomEdge + 200)
+            createFireworks(xMovement: -movementAmount, x: rightEdge, y: bottomEdge + 100)
+            createFireworks(xMovement: -movementAmount, x: rightEdge, y: bottomEdge)
+            
+        default:
+            break
+        }
+    }
+    
+    func checkTouches(_ touches: Set<UITouch>) {
+        guard let touch = touches.first else { return }
+        
+        let location = touch.location(in: self)
+        let nodesAtPoint = nodes(at: location)
+        
+        for node in nodesAtPoint {
+            if node is SKSpriteNode {
+                let sprite = node as! SKSpriteNode
+                if sprite.name == "firework" {
+                    sprite.name = "selected"
+                    for parent in fireworks {
+                        let firework = parent.children[0] as! SKSpriteNode
+                        if firework.name == "selected" && firework.color != sprite.color {
+                            firework.name = "firework"
+                            firework.colorBlendFactor = 1
+                        }
+                    }
+                    sprite.colorBlendFactor = 0
+                }
+            }
+        }
+    }
+    
+    func explode(firework: SKNode) {
+        let color = (firework.children[0] as! SKSpriteNode).color
+        var emitter: SKEmitterNode
+        switch color {
+        case UIColor.cyan:
+            emitter = SKEmitterNode(fileNamed: "explodeCyan")!
+        case UIColor.green:
+            emitter = SKEmitterNode(fileNamed: "explodeGreen")!
+        case UIColor.red:
+            emitter = SKEmitterNode(fileNamed: "explodeRed")!
+        default:
+            emitter = SKEmitterNode(fileNamed: "explode")!
+        }
+        
+        emitter.position = firework.position
+        addChild(emitter)
+        
+        firework.removeFromParent()
+    }
+    
+    func explodeFireworks() {
+        var numExploded = 0
+        for (index, fireworkContainer) in fireworks.enumerated().reversed() {
+            let firework = fireworkContainer.children[0] as! SKSpriteNode
+            if firework.name == "selected" {
+                explode(firework: fireworkContainer)
+                fireworks.remove(at: index)
+                numExploded += 1
+            }
+        }
+        
+        switch numExploded {
+        case 0:
+            break
+        case 1:
+            score += 200
+        case 2:
+            score += 500
+        case 3:
+            score += 1500
+        case 4:
+            score += 2500
+        default:
+            score += 4000
+        }
     }
 }
+
+
+
+
+
